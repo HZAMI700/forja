@@ -20,7 +20,7 @@ new_sqlite_classes = ["SupportAgent"]
 [[d1_databases]]
 binding = "DB"
 database_name = "horizontes_bot_db"
-database_id = "{{D1_DATABASE_ID}}"  # filled in by skill at deploy time
+database_id = "035716b2-154c-4659-9112-10bf99afca92"
 
 [[vectorize]]
 binding = "KB"
