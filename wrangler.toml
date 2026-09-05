@@ -26,9 +26,10 @@ database_id = "{{D1_DATABASE_ID}}"  # filled in by skill at deploy time
 binding = "KB"
 index_name = "horizontes_bot_kb"
 
-[[r2_buckets]]
-binding = "CATALOG"
-bucket_name = "horizontes-bot-catalog"
+# R2 bucket is optional. Uncomment if you have enabled R2 in Cloudflare Dashboard:
+# [[r2_buckets]]
+# binding = "CATALOG"
+# bucket_name = "horizontes-bot-catalog"
 
 [vars]
 BOT_NAME = "{{BOT_NAME}}"

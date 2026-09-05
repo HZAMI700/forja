@@ -7,7 +7,7 @@ export interface Env {
   AGENT: DurableObjectNamespace<SupportAgent>;
   DB: D1Database;
   KB: VectorizeIndex;
-  CATALOG: R2Bucket;
+  CATALOG?: R2Bucket;
   AI: Ai;
 
   // Vars (member-set)
