@@ -24,7 +24,7 @@ database_id = "035716b2-154c-4659-9112-10bf99afca92"
 
 [[vectorize]]
 binding = "KB"
-index_name = "horizontes_bot_kb"
+index_name = "horizontes-bot-kb"
 
 # R2 bucket is optional. Uncomment if you have enabled R2 in Cloudflare Dashboard:
 # [[r2_buckets]]
