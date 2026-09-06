@@ -24,6 +24,12 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.get("/health", (c) => c.text("ok", 200));
 
+// Root route: redirect to the admin dashboard UI so visiting workers.dev loads the app
+app.get("/", (c) => {
+  const search = new URL(c.req.url).search;
+  return c.redirect(`/admin${search}`);
+});
+
 // Parse the provider payload via the channel adapter, derive the per-user DO id
 // (channel + ':' + channelUserId), and forward the normalized message to the
 // SupportAgent's `/ingest` endpoint. The DO buffers + schedules the alarm.
