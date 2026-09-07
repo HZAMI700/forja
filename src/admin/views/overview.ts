@@ -155,25 +155,29 @@ export async function renderOverview(env: Env): Promise<string> {
 
   // --- Markup: actividad + estado del agente -----------------------------------------
   const activityChart = `
-    <div class="card bg-panel border border-line p-[18px]" style="animation-delay:.22s">
+    <div class="card bg-panel border border-line p-5" style="animation-delay:.22s">
       <div class="font-display font-semibold text-[15px] text-cream flex items-center gap-2 mb-0.5">
-        <i data-lucide="bar-chart-3" width="16" height="16" class="text-accent"></i>
-        ${t.activity7d}
+        <div class="w-7 h-7 rounded-lg bg-[rgba(10,132,255,.14)] text-info flex items-center justify-center flex-none">
+          <i data-lucide="bar-chart-3" width="16" height="16"></i>
+        </div>
+        <span>${t.activity7d}</span>
       </div>
-      <div class="text-[11px] text-dim mb-1">${t.msgsProcessedPerDay}</div>
+      <div class="text-[11.5px] text-dim mb-2">${t.msgsProcessedPerDay}</div>
       <div class="flex items-end gap-3" style="height:150px;padding-top:16px">
         ${activityDays
           .map((d) => {
-            const pct = d.msgs === 0 ? 3 : Math.max(8, Math.round((d.msgs / activityMax) * 90));
+            const pct = d.msgs === 0 ? 4 : Math.max(8, Math.round((d.msgs / activityMax) * 90));
             const label = d.isToday ? t.todayLabel : t.dowLetters[d.dow];
-            const barColor = d.isToday ? "var(--accent)" : "var(--linelit)";
+            const barBg = d.isToday
+              ? "linear-gradient(180deg, #0A84FF 0%, rgba(10,132,255,0.7) 100%)"
+              : "rgba(255,255,255,0.12)";
             const numClass = d.isToday ? "text-accent font-semibold" : "text-muted";
             const labelClass = d.isToday ? "text-accent font-semibold" : "text-dim";
             return `
             <div class="bargrp flex-1 flex flex-col items-center gap-2" style="height:100%;justify-content:flex-end">
               <div class="text-[10px] ${numClass}">${d.msgs}</div>
-              <div class="bar" style="width:100%;height:${pct}%;background:${barColor}"></div>
-              <div class="text-[10px] ${labelClass}">${label}</div>
+              <div class="bar" style="width:100%;height:${pct}%;background:${barBg};border-radius:6px 6px 0 0"></div>
+              <div class="text-[10.5px] ${labelClass}">${label}</div>
             </div>`;
           })
           .join("")}
@@ -181,15 +185,17 @@ export async function renderOverview(env: Env): Promise<string> {
     </div>`;
 
   const agentStatus = `
-    <div class="card bg-panel border border-line p-[18px] flex flex-col" style="animation-delay:.26s">
+    <div class="card bg-panel border border-line p-5 flex flex-col" style="animation-delay:.26s">
       <div class="font-display font-semibold text-[15px] text-cream flex items-center gap-2 mb-3.5">
-        <i data-lucide="activity" width="16" height="16" class="text-accent"></i>
-        ${t.agentStatus}
+        <div class="w-7 h-7 rounded-lg bg-[rgba(48,209,88,.14)] text-ok flex items-center justify-center flex-none">
+          <i data-lucide="activity" width="16" height="16"></i>
+        </div>
+        <span>${t.agentStatus}</span>
       </div>
       <div class="flex flex-col gap-[11px] text-[12.5px]">
         <div class="flex items-center justify-between">
           <span class="text-muted">${t.activeModel}</span>
-          <span class="font-semibold font-mono text-[11.5px]">${esc(agentModelLabel(env, agentCfg))}</span>
+          <span class="font-semibold font-mono text-[11.5px] bg-[rgba(255,255,255,.06)] border border-line px-2.5 py-0.5 rounded-full">${esc(agentModelLabel(env, agentCfg))}</span>
         </div>
         <div style="height:1px;background:var(--line)"></div>
         <div class="flex items-center justify-between">
@@ -207,9 +213,9 @@ export async function renderOverview(env: Env): Promise<string> {
           <span class="font-semibold ${resolvedPct7d === null ? "text-dim" : "text-ok"}">${resolvedPct7d === null ? "—" : `${resolvedPct7d}%`}</span>
         </div>
       </div>
-      <a href="/admin/agente" class="bigbtn font-display font-bold text-[12.5px] cursor-pointer flex items-center justify-center gap-2"
-         style="background:var(--accent);color:#1a1206;border:1px solid var(--accent);box-shadow:4px 4px 0 var(--linelit);padding:13px;margin-top:18px">
-        <i data-lucide="settings-2" width="16" height="16"></i> ${t.adjustMyAgent}
+      <a href="/admin/agente" class="bigbtn font-display font-semibold text-[13px] cursor-pointer flex items-center justify-center gap-2"
+         style="background:var(--accent);color:#ffffff;border:none;border-radius:12px;box-shadow:0 4px 16px rgba(10,132,255,.35);padding:12px;margin-top:18px">
+        <i data-lucide="sliders" width="16" height="16"></i> ${t.adjustMyAgent}
       </a>
     </div>`;
 
@@ -224,15 +230,15 @@ export async function renderOverview(env: Env): Promise<string> {
         const chanColor = c.channel === "twilio" || c.channel === "whatsapp" ? "var(--info)" : "var(--accent-2)";
         return `
         <a href="/admin/conversations?c=${encodeURIComponent(c.id)}" class="convrow flex items-center gap-3" style="padding:12px 18px;border-top:1px solid var(--line);cursor:pointer">
-          <div class="flex items-center justify-center flex-none" style="width:36px;height:36px;background:var(--raise);border:1px solid var(--linelit);font-size:12px;font-weight:700;color:var(--accent)">${initials}</div>
+          <div class="flex items-center justify-center flex-none rounded-xl" style="width:36px;height:36px;background:var(--raise);border:1px solid var(--linelit);font-size:12px;font-weight:700;color:var(--accent)">${initials}</div>
           <div class="flex-1" style="min-width:0">
             <div class="flex items-center gap-2">
               <span class="text-[13px] font-semibold text-cream">${name}</span>
-              <span style="font-size:9px;letter-spacing:.05em;color:${chanColor};border:1px solid ${chanColor};padding:0 5px">${esc(channelLabel(c.channel))}</span>
+              <span style="font-size:9.5px;letter-spacing:.03em;color:${chanColor};background:rgba(255,255,255,.04);border:1px solid ${chanColor};border-radius:9999px;padding:1px 7px">${esc(channelLabel(c.channel))}</span>
             </div>
             <div class="text-[12px] text-muted mt-0.5" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${preview}</div>
           </div>
-          <div class="text-[10px] text-dim flex-none">${ago(c.last_message_at, t)}</div>
+          <div class="text-[10.5px] text-dim flex-none">${ago(c.last_message_at, t)}</div>
           <i data-lucide="chevron-right" width="16" height="16" class="arr flex-none" style="color:var(--accent);opacity:0;transform:translateX(-4px);transition:all .15s ease"></i>
         </a>`;
       })
@@ -242,10 +248,12 @@ export async function renderOverview(env: Env): Promise<string> {
     <div class="card bg-panel border border-line" style="animation-delay:.3s">
       <div class="flex items-center justify-between" style="padding:16px 18px 12px">
         <div class="font-display font-semibold text-[15px] text-cream flex items-center gap-2">
-          <i data-lucide="messages-square" width="16" height="16" class="text-accent"></i>
-          ${t.recentConversations}
+          <div class="w-7 h-7 rounded-lg bg-[rgba(10,132,255,.14)] text-info flex items-center justify-center flex-none">
+            <i data-lucide="messages-square" width="16" height="16"></i>
+          </div>
+          <span>${t.recentConversations}</span>
         </div>
-        <a href="/admin/conversations" class="flex items-center gap-1 text-[11.5px]">${t.viewAll} <i data-lucide="arrow-right" width="13" height="13"></i></a>
+        <a href="/admin/conversations" class="flex items-center gap-1 text-[12px] font-medium text-accent hover:text-[#409cff]">${t.viewAll} <i data-lucide="chevron-right" width="14" height="14"></i></a>
       </div>
       <div>${convRows}</div>
     </div>`;
@@ -257,95 +265,116 @@ export async function renderOverview(env: Env): Promise<string> {
           .slice(0, 2)
           .map(
             (s) =>
-              `<div class="text-[12.5px] text-cream mb-2" style="border:1px solid var(--linelit);background:var(--panel);padding:10px 12px;line-height:1.45">${esc(s.title)}</div>`,
+              `<div class="text-[12.5px] text-cream mb-2" style="border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);padding:10px 14px;line-height:1.45">${esc(s.title)}</div>`,
           )
           .join("");
 
   const suggestedImprovements = `
-    <div class="card bg-panel border border-line p-[18px] relative overflow-hidden" style="animation-delay:.34s;background:linear-gradient(160deg,var(--panel2),var(--panel));border-color:var(--linelit)">
+    <div class="card bg-panel border border-line p-5 relative overflow-hidden" style="animation-delay:.34s;background:linear-gradient(155deg, rgba(94,92,230,.12), var(--panel));border-color:var(--linelit)">
       <div class="flex items-center gap-2 mb-1">
-        <i data-lucide="sparkles" width="16" height="16" class="text-accent2"></i>
+        <div class="w-7 h-7 rounded-lg bg-[rgba(94,92,230,.2)] text-accent2 flex items-center justify-center flex-none">
+          <i data-lucide="sparkles" width="16" height="16"></i>
+        </div>
         <span class="font-display font-semibold text-[15px] text-cream">${t.suggestedImprovements}</span>
       </div>
-      <div class="text-[11px] text-dim mb-3.5">
+      <div class="text-[11.5px] text-dim mb-3.5">
         ${t.suggestionsDetected(proposedSuggestions.length)}
       </div>
       ${suggestionItems}
-      <a href="/admin/mejoras" class="flex items-center gap-1 text-[11.5px] mt-2.5">${t.viewAll} <i data-lucide="arrow-right" width="13" height="13"></i></a>
+      <a href="/admin/mejoras" class="flex items-center gap-1 text-[12px] font-medium text-accent2 mt-3">${t.viewAll} <i data-lucide="chevron-right" width="14" height="14"></i></a>
     </div>`;
 
   const body = `
     <div class="flex flex-col gap-[22px]">
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[14px]">
         <div class="card bg-panel border border-line p-4 relative overflow-hidden" style="animation-delay:.02s">
-          <div class="absolute top-3 right-3 text-[9.5px] tracking-[.2em] text-dim uppercase">01</div>
-          <div class="flex items-center gap-2 text-muted">
-            <i data-lucide="message-circle" width="15" height="15"></i>
-            <span class="text-[11px] tracking-[.05em]">${t.messagesToday}</span>
+          <div class="flex items-center justify-between text-muted">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-[rgba(10,132,255,.14)] text-info flex items-center justify-center">
+                <i data-lucide="message-circle" width="15" height="15"></i>
+              </div>
+              <span class="text-[11px] font-semibold tracking-wider text-muted">${t.messagesToday}</span>
+            </div>
+            <span class="text-[10px] font-mono text-dim">01</span>
           </div>
-          <div class="glow font-display font-bold text-[38px] leading-none mt-3">${todayMsgs}</div>
+          <div class="glow font-display font-bold text-[34px] leading-none mt-3.5 text-cream">${todayMsgs}</div>
           <div class="text-[11px] text-dim mt-2">${t.last24h}</div>
         </div>
 
         <div class="card bg-panel border border-line p-4 relative overflow-hidden" style="animation-delay:.06s">
-          <div class="absolute top-3 right-3 text-[9.5px] tracking-[.2em] text-dim uppercase">02</div>
-          <div class="flex items-center gap-2 text-muted">
-            <i data-lucide="users" width="15" height="15"></i>
-            <span class="text-[11px] tracking-[.05em]">${t.uniqueCustomers}</span>
+          <div class="flex items-center justify-between text-muted">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-[rgba(94,92,230,.14)] text-accent2 flex items-center justify-center">
+                <i data-lucide="users" width="15" height="15"></i>
+              </div>
+              <span class="text-[11px] font-semibold tracking-wider text-muted">${t.uniqueCustomers}</span>
+            </div>
+            <span class="text-[10px] font-mono text-dim">02</span>
           </div>
-          <div class="glow font-display font-bold text-[38px] leading-none mt-3">${todayConvs}</div>
+          <div class="glow font-display font-bold text-[34px] leading-none mt-3.5 text-cream">${todayConvs}</div>
           <div class="text-[11px] text-dim mt-2">${t.distinctConvsToday}</div>
         </div>
 
         <div class="card bg-panel border border-line p-4 relative overflow-hidden" style="animation-delay:.1s">
-          <div class="absolute top-3 right-3 text-[9.5px] tracking-[.2em] text-dim uppercase">03</div>
-          <div class="flex items-center gap-2 text-muted">
-            <i data-lucide="${niche.navIcon}" width="15" height="15"></i>
-            <span class="text-[11px] tracking-[.05em]">${niche.kpiLabel.toUpperCase()}</span>
+          <div class="flex items-center justify-between text-muted">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-[rgba(48,209,88,.14)] text-ok flex items-center justify-center">
+                <i data-lucide="${niche.navIcon}" width="15" height="15"></i>
+              </div>
+              <span class="text-[11px] font-semibold tracking-wider text-muted">${niche.kpiLabel.toUpperCase()}</span>
+            </div>
+            <span class="text-[10px] font-mono text-dim">03</span>
           </div>
-          <div class="glow font-display font-bold text-[38px] leading-none mt-3 text-accent">${todayLeads}</div>
+          <div class="glow font-display font-bold text-[34px] leading-none mt-3.5 text-ok">${todayLeads}</div>
           <div class="text-[11px] text-dim mt-2">${t.kpiNewToday}</div>
         </div>
 
         <div class="card bg-panel border border-line p-4 relative overflow-hidden" style="animation-delay:.14s">
-          <div class="absolute top-3 right-3 text-[9.5px] tracking-[.2em] text-dim uppercase">04</div>
-          <div class="flex items-center gap-2 text-muted">
-            <i data-lucide="coins" width="15" height="15"></i>
-            <span class="text-[11px] tracking-[.05em]">${t.monthCost}</span>
+          <div class="flex items-center justify-between text-muted">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-[rgba(255,159,10,.14)] text-[#FF9F0A] flex items-center justify-center">
+                <i data-lucide="coins" width="15" height="15"></i>
+              </div>
+              <span class="text-[11px] font-semibold tracking-wider text-muted">${t.monthCost}</span>
+            </div>
+            <span class="text-[10px] font-mono text-dim">04</span>
           </div>
-          <div class="glow font-display font-bold text-[38px] leading-none mt-3">$${totalCost.toFixed(2)}</div>
+          <div class="glow font-display font-bold text-[34px] leading-none mt-3.5 text-cream">$${totalCost.toFixed(2)}</div>
           <div class="text-[11px] text-dim mt-2">${t.monthMsgsClaude30d(monthMsgs)}</div>
         </div>
       </section>
 
-      <section class="card bg-panel border border-line p-[18px]" style="animation-delay:.18s">
+      <section class="card bg-panel border border-line p-5" style="animation-delay:.18s">
         <div class="flex items-center justify-between">
           <div class="font-display font-semibold text-[15px] text-cream flex items-center gap-2">
-            <i data-lucide="activity" width="16" height="16" class="text-accent"></i>
-            ${t.botHealth}
+            <div class="w-7 h-7 rounded-lg bg-[rgba(48,209,88,.14)] text-ok flex items-center justify-center flex-none">
+              <i data-lucide="heart-pulse" width="16" height="16"></i>
+            </div>
+            <span>${t.botHealth}</span>
           </div>
-          <a href="/admin/tickets" class="flex items-center gap-1 text-[11.5px]">
-            ${t.viewTickets} <i data-lucide="arrow-right" width="13" height="13"></i>
+          <a href="/admin/tickets" class="flex items-center gap-1 text-[12px] font-medium text-accent hover:text-[#409cff]">
+            ${t.viewTickets} <i data-lucide="chevron-right" width="14" height="14"></i>
           </a>
         </div>
-        <div class="mt-3" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="mt-3.5" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           ${
             openTickets > 0
-              ? `<span style="font-size:9px;color:var(--bad);border:1px solid var(--bad);padding:1px 6px">${t.ticketsOpen(openTickets)}</span>`
-              : `<span style="font-size:9px;color:var(--ok);border:1px solid var(--ok);padding:1px 6px">${t.zeroTicketsOpen}</span>`
+              ? `<span style="font-size:11px;font-weight:600;color:var(--bad);background:rgba(255,69,58,.12);border:1px solid rgba(255,69,58,.25);border-radius:9999px;padding:3px 10px">${t.ticketsOpen(openTickets)}</span>`
+              : `<span style="font-size:11px;font-weight:600;color:var(--ok);background:rgba(48,209,88,.12);border:1px solid rgba(48,209,88,.25);border-radius:9999px;padding:3px 10px">${t.zeroTicketsOpen}</span>`
           }
           ${(() => {
-            // Cuando el bot escala a humano, ¿alguien se entera? Antes esto
-            // fallaba en silencio; ahora se ve aquí en rojo si falta configurar.
             const notify = handoffNotifyStatus(env);
             return notify.ok
-              ? `<span style="font-size:9px;color:var(--ok);border:1px solid var(--ok);padding:1px 6px">${t.handoffNotifiesVia(notify.channels.join(" + "))}</span>`
-              : `<span style="font-size:9px;color:var(--bad);border:1px solid var(--bad);padding:1px 6px">${t.handoffNoNotice}</span>`;
+              ? `<span style="font-size:11px;font-weight:600;color:var(--ok);background:rgba(48,209,88,.12);border:1px solid rgba(48,209,88,.25);border-radius:9999px;padding:3px 10px">${t.handoffNotifiesVia(notify.channels.join(" + "))}</span>`
+              : `<span style="font-size:11px;font-weight:600;color:var(--bad);background:rgba(255,69,58,.12);border:1px solid rgba(255,69,58,.25);border-radius:9999px;padding:3px 10px">${t.handoffNoNotice}</span>`;
           })()}
           ${(() => {
             const conn = connectionsSummary(env);
             const ok = conn.connected > 0;
-            return `<a href="/admin/conexiones" style="font-size:9px;color:${ok ? "var(--ok)" : "var(--bad)"};border:1px solid ${ok ? "var(--ok)" : "var(--bad)"};padding:1px 6px;text-decoration:none">${ok ? "✓" : "⚠"} ${t.channelsConnected(conn.connected, conn.total)}</a>`;
+            const color = ok ? "var(--ok)" : "var(--bad)";
+            const bg = ok ? "rgba(48,209,88,.12)" : "rgba(255,69,58,.12)";
+            const border = ok ? "rgba(48,209,88,.25)" : "rgba(255,69,58,.25)";
+            return `<a href="/admin/conexiones" style="font-size:11px;font-weight:600;color:${color};background:${bg};border:1px solid ${border};border-radius:9999px;padding:3px 10px;text-decoration:none">${ok ? "✓" : "⚠"} ${t.channelsConnected(conn.connected, conn.total)}</a>`;
           })()}
         </div>
       </section>
