@@ -12,5 +12,15 @@ const PACKS: Record<string, NichePack> = {
 /** Resuelve el pack activo desde BOT_NICHE. Nicho ausente/desconocido → genérico. */
 export function getNiche(env: Env): NichePack {
   const id = (env.BOT_NICHE ?? "").trim().toLowerCase();
-  return PACKS[id] ?? generico;
+  const pack = PACKS[id] ?? generico;
+  const lang = (env.BOT_LANGUAGE ?? "").toLowerCase().trim();
+  if (lang.startsWith("es")) return pack;
+  if (pack.id === "generico") {
+    return {
+      ...pack,
+      kpiLabel: "Leads captured",
+      statusLabels: { new: "New", contacted: "Contacted", sold: "Sold", lost: "Lost" },
+    };
+  }
+  return pack;
 }

@@ -86,4 +86,53 @@ describe("Auto-migration on clean D1 database", () => {
 
     await mf.dispose();
   });
+
+  it("serves the platform in English by default when BOT_LANGUAGE is 'en' or unset", async () => {
+    resetSchemaInitialized();
+
+    const mf = new Miniflare({
+      modules: [{ type: "ESModule", path: "index.js", contents: "export default { fetch() { return new Response('ok'); } };" }],
+      d1Databases: ["DB"],
+      compatibilityDate: "2026-05-01",
+      compatibilityFlags: ["nodejs_compat"],
+    });
+
+    const d1 = await mf.getD1Database("DB");
+
+    const env = {
+      DB: d1,
+      BOT_NAME: "Forja Bot",
+      BUSINESS_NAME: "Forja",
+      BOT_LANGUAGE: "en",
+      BOT_TIER: "pro",
+      BUFFER_SECONDS: "15",
+      DASHBOARD_PASSWORD: "admin",
+      ADMIN_USERNAME: "admin",
+      DASHBOARD_BASE_URL: "https://test.workers.dev",
+    };
+
+    const authHeader = "Basic " + Buffer.from("admin:admin").toString("base64");
+
+    const req = new Request("https://test/admin/overview", {
+      headers: {
+        Authorization: authHeader,
+        Accept: "text/html",
+      },
+    });
+
+    const res = await worker.fetch(req, env as any, {} as any);
+    expect(res.status).toBe(200);
+
+    const body = await res.text();
+    expect(body).toContain('<html lang="en">');
+    expect(body).toContain("Agent Status");
+    expect(body).toContain("MESSAGES TODAY");
+    expect(body).toContain("BOT ONLINE");
+    expect(body).toContain("Home / Overview");
+    expect(body).toContain("Panel · Pro");
+    expect(body).toContain("Active model");
+    expect(body).toContain("Knowledge docs");
+
+    await mf.dispose();
+  });
 });

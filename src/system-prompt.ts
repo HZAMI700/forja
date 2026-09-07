@@ -207,9 +207,9 @@ export function systemPromptFromEnv(
   overrides?: SystemPromptOverrides,
 ): string {
   return renderSystemPrompt({
-    botName: overrides?.botName ?? env.BOT_NAME,
-    businessName: env.BUSINESS_NAME,
-    language: env.BOT_LANGUAGE,
+    botName: overrides?.botName ?? env.BOT_NAME ?? "Forja Bot",
+    businessName: env.BUSINESS_NAME ?? "Forja",
+    language: env.BOT_LANGUAGE || "en",
     businessContext,
     toolList: toolNames,
     nichoPlaybook,

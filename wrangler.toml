@@ -32,10 +32,10 @@ index_name = "horizontes-bot-kb"
 # bucket_name = "horizontes-bot-catalog"
 
 [vars]
-BOT_NAME = "{{BOT_NAME}}"
-BUSINESS_NAME = "{{BUSINESS_NAME}}"
-BOT_LANGUAGE = "{{BOT_LANGUAGE}}"
-BOT_TIER = "{{BOT_TIER}}"  # 'free' | 'pro'
+BOT_NAME = "Forja Bot"
+BUSINESS_NAME = "Forja"
+BOT_LANGUAGE = "en"
+BOT_TIER = "pro"  # 'free' | 'pro'
 BUFFER_SECONDS = "15"
 DASHBOARD_BASE_URL = "https://horizontes-bot.workers.dev"
 DASHBOARD_PASSWORD = "admin"

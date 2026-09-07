@@ -12,6 +12,7 @@ import type { Env } from "../../env";
 import { isPro, PRO_ONLY_TABS } from "../../config";
 import { getNiche } from "../../niches";
 import type { NichePack } from "../../niches";
+import { getT, getLang, type Translations } from "../i18n";
 
 const UPGRADE_URL = "/admin/upgrade";
 
@@ -27,41 +28,42 @@ interface Section {
   items: Item[];
 }
 
-// Navigation model. The item ids + hrefs are load-bearing (views and tests
-// depend on them) — do not rename them. Icons are lucide names.
-const NAV: Section[] = [
-  {
-    label: "Inicio",
-    items: [{ id: "overview", label: "Resumen", href: "/admin/overview", icon: "layout-dashboard" }],
-  },
-  {
-    label: "Bandeja",
-    items: [
-      { id: "conversations", label: "Conversaciones", href: "/admin/conversations", icon: "messages-square" },
-      { id: "leads", label: "Leads", href: "/admin/leads", icon: "user-plus" },
-      { id: "tickets", label: "Tickets", href: "/admin/tickets", icon: "life-buoy" },
-      { id: "campanas", label: "Campañas", href: "/admin/campanas", icon: "megaphone" },
-    ],
-  },
-  {
-    label: "Mi Agente",
-    items: [
-      { id: "agente", label: "Flujo", href: "/admin/agente", icon: "workflow" },
-      { id: "kb", label: "Conocimiento", href: "/admin/kb", icon: "book-open" },
-      { id: "mejoras", label: "Mejoras", href: "/admin/mejoras", icon: "sparkles" },
-      { id: "conexiones", label: "Conexiones", href: "/admin/conexiones", icon: "plug-zap" },
-      { id: "config", label: "Configuración", href: "/admin/config", icon: "sliders-horizontal" },
-    ],
-  },
-  {
-    label: "Análisis",
-    items: [
-      { id: "insights", label: "Insights", href: "/admin/insights", icon: "scan-eye" },
-      { id: "stats", label: "Estadísticas", href: "/admin/stats", icon: "bar-chart-3" },
-      { id: "costs", label: "Costos", href: "/admin/costs", icon: "receipt" },
-    ],
-  },
-];
+export function getNav(env?: Env): Section[] {
+  const t = getT(env);
+  return [
+    {
+      label: t.navHome,
+      items: [{ id: "overview", label: t.navOverview, href: "/admin/overview", icon: "layout-dashboard" }],
+    },
+    {
+      label: t.navInbox,
+      items: [
+        { id: "conversations", label: t.navConversations, href: "/admin/conversations", icon: "messages-square" },
+        { id: "leads", label: t.navLeads, href: "/admin/leads", icon: "user-plus" },
+        { id: "tickets", label: t.navTickets, href: "/admin/tickets", icon: "life-buoy" },
+        { id: "campanas", label: t.navCampaigns, href: "/admin/campanas", icon: "megaphone" },
+      ],
+    },
+    {
+      label: t.navMyAgent,
+      items: [
+        { id: "agente", label: t.navFlow, href: "/admin/agente", icon: "workflow" },
+        { id: "kb", label: t.navKnowledge, href: "/admin/kb", icon: "book-open" },
+        { id: "mejoras", label: t.navImprovements, href: "/admin/mejoras", icon: "sparkles" },
+        { id: "conexiones", label: t.navConnections, href: "/admin/conexiones", icon: "plug-zap" },
+        { id: "config", label: t.navSettings, href: "/admin/config", icon: "sliders-horizontal" },
+      ],
+    },
+    {
+      label: t.navAnalytics,
+      items: [
+        { id: "insights", label: t.navInsights, href: "/admin/insights", icon: "scan-eye" },
+        { id: "stats", label: t.navStats, href: "/admin/stats", icon: "bar-chart-3" },
+        { id: "costs", label: t.navCosts, href: "/admin/costs", icon: "receipt" },
+      ],
+    },
+  ];
+}
 
 // <head> assets: fonts, Tailwind CDN + token config, lucide, htmx.
 const HEAD_ASSETS = `
@@ -257,10 +259,10 @@ function navItem(item: Item, active: boolean): string {
 
 // Tier free: los tabs Pro se muestran bloqueados (candado + tag PRO) y llevan a
 // la página de upgrade en vez de a la vista real. Se ven, pero invitan a subir.
-function navItemLocked(item: Item): string {
+function navItemLocked(item: Item, t: Translations): string {
   const base =
     "display:flex;align-items:center;gap:11px;padding:9px 10px;font-size:13px;color:var(--dim);border-left:2px solid transparent";
-  return `<a href="${UPGRADE_URL}" class="navlink" style="${base}" title="Disponible en Pro">
+  return `<a href="${UPGRADE_URL}" class="navlink" style="${base}" title="${t.availableInPro}">
     <i data-lucide="lock" width="15" height="15" style="color:var(--dim)"></i> ${item.label}
     <span style="margin-left:auto;font-size:8.5px;letter-spacing:.14em;color:var(--accent2);border:1px solid var(--line);padding:1px 5px">PRO</span>
   </a>`;
@@ -273,15 +275,17 @@ function applyNiche(item: Item, niche: NichePack | null): Item {
   return { ...item, label: niche.navLabel, icon: niche.navIcon };
 }
 
-function sidebar(activeTab: string, pro: boolean, niche: NichePack | null): string {
+function sidebar(activeTab: string, pro: boolean, niche: NichePack | null, env?: Env): string {
+  const t = getT(env);
+  const nav = getNav(env);
   const locked = (id: string) => !pro && (PRO_ONLY_TABS as readonly string[]).includes(id);
-  const sections = NAV.map((sec) => {
+  const sections = nav.map((sec) => {
     const hasActive = sec.items.some((i) => i.id === activeTab);
     const labelColor = hasActive ? "var(--accent)" : "var(--dim)";
     const items = sec.items
       .map((raw) => {
         const i = applyNiche(raw, niche);
-        return locked(i.id) ? navItemLocked(i) : navItem(i, i.id === activeTab);
+        return locked(i.id) ? navItemLocked(i, t) : navItem(i, i.id === activeTab);
       })
       .join("");
     return `<div class="sb-sec" style="color:${labelColor}">${sec.label}</div>${items}`;
@@ -295,7 +299,7 @@ function sidebar(activeTab: string, pro: boolean, niche: NichePack | null): stri
         </div>
         <div style="line-height:1.05">
           <div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;letter-spacing:-.02em">Forja</div>
-          <div style="font-size:9.5px;letter-spacing:.22em;color:var(--dim);text-transform:uppercase">Panel · ${pro ? "Pro" : "Free"}</div>
+          <div style="font-size:9.5px;letter-spacing:.22em;color:var(--dim);text-transform:uppercase">${t.dashboardTier(pro)}</div>
         </div>
       </div>
     </div>
@@ -306,8 +310,8 @@ function sidebar(activeTab: string, pro: boolean, niche: NichePack | null): stri
           <i data-lucide="bot" width="16" height="16"></i>
         </div>
         <div style="line-height:1.2;overflow:hidden">
-          <div style="font-size:12px;font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">Panel del bot</div>
-          <div style="font-size:10px;color:var(--dim)">sesión activa</div>
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">${t.botDashboard}</div>
+          <div style="font-size:10px;color:var(--dim)">${t.activeSession}</div>
         </div>
       </div>
     </div>
@@ -319,11 +323,14 @@ export function layout(opts: { title: string; activeTab: string; body: string; e
   // se asume Pro para no ocultar nada por accidente.
   const pro = opts.env ? isPro(opts.env) : true;
   const niche = opts.env ? getNiche(opts.env) : null;
-  const section = NAV.find((s) => s.items.some((i) => i.id === opts.activeTab)) ?? NAV[0];
+  const t = getT(opts.env);
+  const lang = getLang(opts.env);
+  const nav = getNav(opts.env);
+  const section = nav.find((s) => s.items.some((i) => i.id === opts.activeTab)) ?? nav[0];
   const item = applyNiche(section.items.find((i) => i.id === opts.activeTab) ?? section.items[0], niche);
 
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -333,7 +340,7 @@ export function layout(opts: { title: string; activeTab: string; body: string; e
 </head>
 <body class="scanlines">
   <div class="shell">
-    ${sidebar(opts.activeTab, pro, niche)}
+    ${sidebar(opts.activeTab, pro, niche, opts.env)}
     <div style="display:flex;flex-direction:column;min-width:0">
       <header style="position:sticky;top:0;z-index:30;background:rgba(20,16,9,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 26px;display:flex;align-items:center;gap:20px">
         <div style="min-width:0">
@@ -343,7 +350,7 @@ export function layout(opts: { title: string; activeTab: string; body: string; e
         <div id="proj-switcher" style="margin-left:auto"></div>
         <div class="live-pill">
           <span style="width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 1.8s ease-in-out infinite,ring 2s infinite"></span>
-          <span style="font-size:11px;font-weight:600;letter-spacing:.04em">BOT EN LÍNEA</span>
+          <span style="font-size:11px;font-weight:600;letter-spacing:.04em">${t.botOnline}</span>
         </div>
       </header>
       <main style="padding:22px 26px;min-width:0">${opts.body}</main>
