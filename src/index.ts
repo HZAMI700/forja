@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import type { Env } from "./env";
 import type { ChannelAdapter } from "./channels/shared";
 import { telegramAdapter } from "./channels/telegram";
@@ -17,10 +18,23 @@ import { detectKind } from "./learn/fieldPath";
 import { saveCapture, isLearnMode } from "./learn/mapping";
 import { tokensMatch, manychatWebhookAllowed } from "./http-auth";
 import { apiApp } from "./api";
+import { ensureDbSchema } from "./db/auto-migrate";
 
 export { SupportAgent } from "./agent";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Auto-migrate: ensure D1 tables and indexes exist on first request
+app.use("*", async (c, next) => {
+  if (c.env?.DB) {
+    try {
+      await ensureDbSchema(c.env.DB);
+    } catch (err) {
+      console.error("Auto-migrate DB schema warning:", err);
+    }
+  }
+  await next();
+});
 
 app.get("/health", (c) => c.text("ok", 200));
 
@@ -248,6 +262,43 @@ app.post("/kb/reindex", async (c) => {
   }
   const r = await reindexKb(c.env);
   return c.json({ ok: true, indexed: r.indexed }, 200);
+});
+
+app.onError((err, c) => {
+  if (err instanceof HTTPException) {
+    return err.getResponse();
+  }
+  console.error("Worker unhandled error:", err);
+  const accept = c.req.header("accept") ?? "";
+  if (accept.includes("text/html")) {
+    return c.html(
+      `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Error del servidor - Forja</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0c0b0a; color: #f5f2eb; padding: 40px 20px; margin: 0; }
+    .card { background: #161513; border: 1px solid #2b2824; border-radius: 8px; max-width: 600px; margin: 40px auto; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    h1 { color: #e09f3e; font-size: 20px; margin-top: 0; }
+    p { color: #a0998f; font-size: 14px; line-height: 1.5; }
+    pre { background: #0c0b0a; border: 1px solid #2b2824; padding: 12px; border-radius: 4px; overflow-x: auto; color: #ff8080; font-size: 12px; }
+    a { display: inline-block; margin-top: 12px; color: #0c0b0a; background: #e09f3e; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Error en el servidor (500)</h1>
+    <p>Ocurrió un error inesperado al procesar la solicitud:</p>
+    <pre>${err?.message || String(err)}</pre>
+    <a href="/admin">Ir al Dashboard</a>
+  </div>
+</body>
+</html>`,
+      500,
+    );
+  }
+  return c.text(`Internal Server Error: ${err?.message || String(err)}`, 500);
 });
 
 app.notFound((c) => c.text("not found", 404));

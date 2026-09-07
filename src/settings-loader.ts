@@ -78,8 +78,13 @@ function parseCsvList(value: string | undefined): string[] {
  * defaults. Anything empty/absent in settings falls back to the env/default.
  */
 export async function resolveAgentConfig(env: Env, toolNames: string[]): Promise<AgentConfig> {
-  const repo = new SettingsRepo(new Db(env.DB));
-  const settings = await repo.all();
+  let settings: Record<string, string> = {};
+  try {
+    const repo = new SettingsRepo(new Db(env.DB));
+    settings = await repo.all();
+  } catch (err) {
+    console.warn("Failed to load settings from DB, using defaults:", err);
+  }
 
   const get = (key: string): string | undefined => {
     const v = settings[key];

@@ -55,48 +55,92 @@ export async function renderOverview(env: Env): Promise<string> {
   const sevenDays = Date.now() - 7 * 86_400_000;
   const thirtyDays = Date.now() - 30 * 86_400_000;
 
-  const todayMsgs = (await db.first<{ n: number }>(
-    "SELECT COUNT(*) as n FROM messages WHERE created_at > ?", [oneDay],
-  ))?.n ?? 0;
-  const todayConvs = (await db.first<{ n: number }>(
-    "SELECT COUNT(DISTINCT conversation_id) as n FROM messages WHERE created_at > ?", [oneDay],
-  ))?.n ?? 0;
-  const todayLeads = (await db.first<{ n: number }>(
-    "SELECT COUNT(*) as n FROM leads WHERE created_at > ?", [oneDay],
-  ))?.n ?? 0;
-
-  const monthMsgs = (await db.first<{ n: number }>(
-    "SELECT COUNT(*) as n FROM messages WHERE created_at > ?", [thirtyDays],
-  ))?.n ?? 0;
-
-  const tokenUsage = await db.all<{ model_used: string; input: number; output: number; cached: number }>(
-    `SELECT model_used,
-            SUM(COALESCE(input_tokens, 0)) as input,
-            SUM(COALESCE(output_tokens, 0)) as output,
-            SUM(COALESCE(cached_input_tokens, 0)) as cached
-     FROM messages WHERE created_at > ? GROUP BY model_used`,
-    [thirtyDays],
-  );
+  let todayMsgs = 0;
+  let todayConvs = 0;
+  let todayLeads = 0;
+  let monthMsgs = 0;
   let totalCost = 0;
-  for (const row of tokenUsage) {
-    if (!row.model_used) continue;
-    totalCost += costOfUsage(row.model_used as ModelId, {
-      input: row.input,
-      output: row.output,
-      cached: row.cached,
-    });
+  let openTickets = 0;
+  let activityRows: Array<{ day: string; msgs: number }> = [];
+  let recentConvs: Array<{
+    id: string;
+    display_name: string | null;
+    channel_user_id: string | null;
+    channel: string;
+    last_message_at: number | null;
+    last_msg: string | null;
+  }> = [];
+  let proposedSuggestions: Array<any> = [];
+  let kbDocsCount = 0;
+  let resolvedPct7d: number | null = null;
+
+  try {
+    todayMsgs = (await db.first<{ n: number }>(
+      "SELECT COUNT(*) as n FROM messages WHERE created_at > ?", [oneDay],
+    ))?.n ?? 0;
+    todayConvs = (await db.first<{ n: number }>(
+      "SELECT COUNT(DISTINCT conversation_id) as n FROM messages WHERE created_at > ?", [oneDay],
+    ))?.n ?? 0;
+    todayLeads = (await db.first<{ n: number }>(
+      "SELECT COUNT(*) as n FROM leads WHERE created_at > ?", [oneDay],
+    ))?.n ?? 0;
+    monthMsgs = (await db.first<{ n: number }>(
+      "SELECT COUNT(*) as n FROM messages WHERE created_at > ?", [thirtyDays],
+    ))?.n ?? 0;
+
+    const tokenUsage = await db.all<{ model_used: string; input: number; output: number; cached: number }>(
+      `SELECT model_used,
+              SUM(COALESCE(input_tokens, 0)) as input,
+              SUM(COALESCE(output_tokens, 0)) as output,
+              SUM(COALESCE(cached_input_tokens, 0)) as cached
+       FROM messages WHERE created_at > ? GROUP BY model_used`,
+      [thirtyDays],
+    );
+    for (const row of tokenUsage) {
+      if (!row.model_used) continue;
+      totalCost += costOfUsage(row.model_used as ModelId, {
+        input: row.input,
+        output: row.output,
+        cached: row.cached,
+      });
+    }
+
+    openTickets = (await db.first<{ n: number }>(
+      "SELECT COUNT(*) as n FROM tickets WHERE status != 'resolved'",
+    ))?.n ?? 0;
+
+    activityRows = await db.all<{ day: string; msgs: number }>(
+      `SELECT date(created_at / 1000, 'unixepoch') as day, COUNT(*) as msgs
+       FROM messages WHERE created_at > ? GROUP BY day ORDER BY day ASC`,
+      [sevenDays],
+    );
+
+    const docs = await new KbDocsRepo(db).list();
+    kbDocsCount = docs.length;
+
+    const insight7d = await new InsightsRepo(db).stats(sevenDays);
+    resolvedPct7d =
+      insight7d.analyzed > 0 ? Math.round((insight7d.resolvedNoHuman / insight7d.analyzed) * 100) : null;
+
+    recentConvs = await db.all<{
+      id: string;
+      display_name: string | null;
+      channel_user_id: string | null;
+      channel: string;
+      last_message_at: number | null;
+      last_msg: string | null;
+    }>(
+      `SELECT c.id, c.display_name, c.channel_user_id, c.channel, c.last_message_at,
+         (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg
+       FROM conversations c ORDER BY c.last_message_at DESC LIMIT 5`,
+    );
+
+    proposedSuggestions = await new SuggestionsRepo(db).listProposed();
+  } catch (e) {
+    console.warn("renderOverview: DB query warning:", e);
   }
 
-  const openTickets = (await db.first<{ n: number }>(
-    "SELECT COUNT(*) as n FROM tickets WHERE status != 'resolved'",
-  ))?.n ?? 0;
-
   // --- Actividad 7 días ---------------------------------------------------------
-  const activityRows = await db.all<{ day: string; msgs: number }>(
-    `SELECT date(created_at / 1000, 'unixepoch') as day, COUNT(*) as msgs
-     FROM messages WHERE created_at > ? GROUP BY day ORDER BY day ASC`,
-    [sevenDays],
-  );
   const activityByDay = new Map(activityRows.map((r) => [r.day, r.msgs]));
   const activityDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(Date.now() - (6 - i) * 86_400_000);
@@ -108,28 +152,7 @@ export async function renderOverview(env: Env): Promise<string> {
   // --- Estado del agente ----------------------------------------------------------
   const toolNames = Object.keys(buildTools({ env, getConversationId: () => null }));
   const agentCfg = await resolveAgentConfig(env, toolNames);
-  const kbDocs = await new KbDocsRepo(db).list();
-  const totalKbDocs = kbDocs.length + FIXTURE_CHUNKS.length;
-  const insight7d = await new InsightsRepo(db).stats(sevenDays);
-  const resolvedPct7d =
-    insight7d.analyzed > 0 ? Math.round((insight7d.resolvedNoHuman / insight7d.analyzed) * 100) : null;
-
-  // --- Conversaciones recientes -----------------------------------------------------
-  const recentConvs = await db.all<{
-    id: string;
-    display_name: string | null;
-    channel_user_id: string | null;
-    channel: string;
-    last_message_at: number | null;
-    last_msg: string | null;
-  }>(
-    `SELECT c.id, c.display_name, c.channel_user_id, c.channel, c.last_message_at,
-       (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_msg
-     FROM conversations c ORDER BY c.last_message_at DESC LIMIT 5`,
-  );
-
-  // --- Mejoras sugeridas -------------------------------------------------------------
-  const proposedSuggestions = await new SuggestionsRepo(db).listProposed();
+  const totalKbDocs = kbDocsCount + FIXTURE_CHUNKS.length;
 
   // --- Markup: actividad + estado del agente -----------------------------------------
   const activityChart = `
