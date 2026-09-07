@@ -671,7 +671,7 @@ adminApp.post("/conversations/:id/suggest", async (c) => {
     messages: aiMessages,
   });
   // HTMX swaps this into #suggestion-box; the "Usar" button fills the composer.
-  return c.html(renderSuggestionBox(result.text));
+  return c.html(renderSuggestionBox(result.text, c.env));
 });
 
 // --- Fallback ---------------------------------------------------------------

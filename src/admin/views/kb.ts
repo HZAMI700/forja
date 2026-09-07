@@ -1,12 +1,11 @@
-// Tab "Conocimiento" — la KB editable desde el dashboard (F4).
-//
-// El dueño escribe documentos (horarios, políticas, FAQ, promos) y quedan
-// indexados en Vectorize AL GUARDAR: el bot los usa vía searchKb desde el
-// siguiente mensaje. Los fragmentos precargados del repo conviven con estos.
+// Tab "Conocimiento" — Editable Bot Knowledge Base.
+// Business owners can create and edit documents (hours, policies, FAQ, pricing).
+// Documents are indexed into Vectorize upon saving.
 import type { Env } from "../../env";
 import { Db } from "../../db/client";
 import { KbDocsRepo, FIXTURE_CHUNKS, MAX_DOC_CHARS, chunkContent, type KbDoc } from "../../kb/docs";
 import { layout } from "./layout";
+import { getT, getLang, type Translations } from "../i18n";
 
 function esc(s: string): string {
   return s.replace(
@@ -15,34 +14,37 @@ function esc(s: string): string {
   );
 }
 
-function ago(ms: number): string {
+function ago(ms: number, t: Translations): string {
   const min = Math.floor((Date.now() - ms) / 60_000);
-  if (min < 1) return "ahora";
-  if (min < 60) return `hace ${min} min`;
+  if (min < 1) return t.timeJustNow;
+  if (min < 60) return t.timeMinutesAgo(min);
   const h = Math.floor(min / 60);
-  if (h < 24) return `hace ${h} h`;
-  return `hace ${Math.floor(h / 24)} d`;
+  if (h < 24) return t.timeHoursAgo(h);
+  return t.timeDaysAgo(Math.floor(h / 24));
 }
 
-/** Callout banner. `tone` picks the token: ok=verde (éxito), bad=rojo (error), neutral=gris (info). */
+/** Callout banner styled with iOS frosted alert colors. */
 function banner(tone: "ok" | "bad" | "neutral", text: string): string {
   const color = tone === "ok" ? "var(--ok)" : tone === "bad" ? "var(--bad)" : "var(--dim)";
-  const bg = tone === "ok" ? "rgba(127,183,126,.1)" : tone === "bad" ? "rgba(217,122,106,.1)" : "var(--panel2)";
-  return `<div style="border:1px solid ${color};background:${bg};color:${tone === "neutral" ? "var(--muted)" : color};padding:10px 14px;font-size:12.5px;margin-bottom:16px">${text}</div>`;
+  const bg = tone === "ok" ? "rgba(48,209,88,.12)" : tone === "bad" ? "rgba(255,69,58,.12)" : "var(--panel2)";
+  const border = tone === "ok" ? "rgba(48,209,88,.3)" : tone === "bad" ? "rgba(255,69,58,.3)" : "var(--line)";
+  return `<div style="border:1px solid ${border};background:${bg};color:${tone === "neutral" ? "var(--muted)" : color};padding:12px 16px;border-radius:12px;font-size:12.5px;font-weight:500;margin-bottom:18px">${text}</div>`;
 }
 
 export async function renderKbList(
   env: Env,
   flash?: { saved?: boolean; deleted?: boolean; reindexed?: string },
 ): Promise<string> {
+  const t = getT(env);
+  const isEs = getLang(env) === "es";
   const docs = await new KbDocsRepo(new Db(env.DB)).list();
 
   const bannerHtml = flash?.saved
-    ? banner("ok", "✓ Guardado e indexado — el bot ya puede usarlo.")
+    ? banner("ok", t.kbSavedBanner)
     : flash?.deleted
-      ? banner("neutral", "Documento eliminado (también del índice del bot).")
+      ? banner("neutral", t.kbDeletedBanner)
       : flash?.reindexed
-        ? banner("ok", `✓ Reindexado: ${esc(flash.reindexed)} fragmentos actualizados.`)
+        ? banner("ok", isEs ? `✓ Reindexado: ${esc(flash.reindexed)} fragmentos actualizados.` : `✓ Reindexed: ${esc(flash.reindexed)} chunks updated.`)
         : "";
 
   const rows = docs.length
@@ -50,94 +52,118 @@ export async function renderKbList(
         .map((d) => {
           const chunks = chunkContent(d.content).length;
           return `
-      <div class="kbrow" style="display:flex;align-items:center;gap:12px;padding:13px 18px;border-top:1px solid var(--line);transition:background .12s ease">
+      <div class="kbrow flex items-center gap-3 p-4 border-t border-line hover:bg-[rgba(255,255,255,.03)] transition-colors">
         <div style="min-width:0;flex:1">
-          <a href="/admin/kb/${encodeURIComponent(d.id)}/edit" class="font-display font-semibold text-[13px] text-cream" style="display:block">${esc(d.title)}</a>
-          <div class="text-dim text-[11.5px]" style="margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.content.replace(/\s+/g, " ").slice(0, 90))}</div>
+          <a href="/admin/kb/${encodeURIComponent(d.id)}/edit" class="font-display font-semibold text-[13.5px] text-cream block hover:text-accent transition-colors">${esc(d.title)}</a>
+          <div class="text-dim text-[11.5px] mt-0.5 truncate">${esc(d.content.replace(/\s+/g, " ").slice(0, 95))}</div>
         </div>
-        <div class="text-dim text-[10.5px]" style="text-align:right;white-space:nowrap;flex:none">
-          <div>${d.content.length.toLocaleString("es-MX")} caracteres · ${chunks} ${chunks === 1 ? "fragmento" : "fragmentos"}</div>
-          <div>${ago(d.updated_at)}</div>
+        <div class="text-dim text-[11px] text-right whitespace-nowrap flex-none">
+          <div>${t.kbChars(d.content.length, chunks)}</div>
+          <div class="mt-0.5">${ago(d.updated_at, t)}</div>
         </div>
-        <a href="/admin/kb/${encodeURIComponent(d.id)}/edit" class="kbedit" style="border:1px solid var(--line);color:var(--muted);padding:5px 12px;font-size:11px;white-space:nowrap;transition:all .12s ease;flex:none">Editar</a>
+        <a href="/admin/kb/${encodeURIComponent(d.id)}/edit" class="apple-btn-secondary text-[11.5px] px-3 py-1.5 rounded-lg flex-none" style="text-decoration:none">
+          ${t.kbEditDoc}
+        </a>
       </div>`;
         })
         .join("")
-    : `<div class="text-dim text-[12.5px]" style="padding:40px 18px;text-align:center">
-         Aún no tienes documentos propios. Crea el primero — horarios, precios, políticas, promociones…
+    : `<div class="text-dim text-[13px] py-12 px-4 text-center">
+         ${t.kbNoDocsYet}
        </div>`;
 
   const body = `
     ${bannerHtml}
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <div>
-        <h2 class="font-display font-semibold text-[15px] text-cream">📚 Conocimiento del bot</h2>
-        <p class="text-muted text-[12.5px]" style="margin-top:2px">Lo que tu bot sabe del negocio. Cada documento se indexa al guardar y el bot lo usa de inmediato.</p>
+        <h2 class="font-display font-semibold text-[16px] text-cream">${t.kbTitle}</h2>
+        <p class="text-muted text-[12.5px] mt-0.5">${t.kbSubtitle}</p>
       </div>
-      <a href="/admin/kb/new" class="bigbtn font-display font-bold text-[12.5px] cursor-pointer"
-         style="margin-left:auto;background:var(--accent);border:1px solid var(--accent);color:#1a1206;box-shadow:3px 3px 0 var(--linelit);padding:9px 16px;display:flex;align-items:center;gap:8px;white-space:nowrap">
-        <i data-lucide="plus" width="14" height="14"></i> Nuevo documento
+      <a href="/admin/kb/new" class="apple-btn-primary font-display font-semibold text-[13px] flex items-center gap-2" style="text-decoration:none">
+        <i data-lucide="plus" width="15" height="15"></i> ${t.kbNewDoc}
       </a>
     </div>
 
-    <div class="bg-panel border border-line" style="margin-bottom:16px;overflow:hidden">
+    <div class="card bg-panel border border-line rounded-2xl mb-4 overflow-hidden">
       ${rows}
     </div>
 
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px" class="text-dim text-[11.5px]">
-      <span>Además, tu bot trae <b class="text-cream">${FIXTURE_CHUNKS.length}</b> fragmentos precargados del repo.</span>
-      <form method="POST" action="/admin/kb/reindex" style="margin-left:auto">
-        <button class="ghostbtn cursor-pointer" style="display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:8px 14px;font-size:11.5px;transition:all .12s ease">
-          <i data-lucide="refresh-cw" width="13" height="13"></i> Reindexar todo
+    <div class="flex flex-wrap items-center justify-between gap-3 text-dim text-[12px] px-1">
+      <span>${isEs ? `Además, tu bot incluye <b class="text-cream">${FIXTURE_CHUNKS.length}</b> fragmentos precargados del sistema.` : `Your bot also comes with <b class="text-cream">${FIXTURE_CHUNKS.length}</b> preloaded system fragments.`}</span>
+      <form method="POST" action="/admin/kb/reindex">
+        <button class="apple-btn-secondary text-[11.5px] flex items-center gap-1.5 cursor-pointer">
+          <i data-lucide="refresh-cw" width="13" height="13"></i> ${isEs ? "Reindexar todo" : "Reindex all"}
         </button>
       </form>
     </div>`;
 
-  return layout({ title: "Conocimiento", activeTab: "kb", body, env });
+  return layout({ title: t.navKnowledge, activeTab: "kb", body, env });
 }
 
 export function renderKbEditor(doc: KbDoc | null, env: Env): string {
+  const t = getT(env);
+  const isEs = getLang(env) === "es";
   const isNew = doc === null;
+  const backLabel = isEs ? "Volver a Conocimiento" : "Back to Knowledge";
+  const titleLabel = isEs ? "Título" : "Title";
+  const titleHelp = isEs ? "Un nombre claro del tema (el bot lo ve como contexto)." : "A clear name for this topic (the bot sees this as context).";
+  const titlePlaceholder = isEs ? "Ej. Horarios y ubicación" : "e.g. Business Hours & Location";
+  const contentLabel = isEs ? "Contenido" : "Content";
+  const contentHelp = isEs
+    ? `Escribe en lenguaje natural, como se lo explicarías a un empleado nuevo. Máximo ${MAX_DOC_CHARS.toLocaleString("es-MX")} caracteres.`
+    : `Write in plain natural language, as you would explain to a new team member. Max ${MAX_DOC_CHARS.toLocaleString()} characters.`;
+  const contentPlaceholder = isEs
+    ? "Ej. Abrimos de lunes a sábado de 9am a 7pm. Los domingos cerramos. Estamos en Av. Reforma 123…"
+    : "e.g. We are open Monday through Saturday from 9am to 7pm. Closed on Sundays. Located at 123 Main Street...";
+  const saveLabel = isEs ? "Guardar e indexar" : "Save & Index";
+  const deleteSummary = isEs ? "Eliminar documento…" : "Delete document…";
+  const deleteConfirmText = isEs ? "¿Seguro? El bot dejará de saber esto." : "Are you sure? The bot will stop knowing this.";
+  const deleteButton = isEs ? "Sí, eliminar" : "Yes, delete";
+
   const body = `
-    <div style="margin-bottom:16px">
-      <a href="/admin/kb" style="font-size:12.5px;display:inline-flex;align-items:center;gap:6px">
-        <i data-lucide="arrow-left" width="14" height="14"></i> Volver a Conocimiento
+    <div class="mb-4">
+      <a href="/admin/kb" class="text-[12.5px] text-accent flex items-center gap-1.5" style="text-decoration:none">
+        <i data-lucide="arrow-left" width="14" height="14"></i> ${backLabel}
       </a>
     </div>
-    <form method="POST" action="/admin/kb/save" class="bg-panel border border-line" style="padding:22px;display:flex;flex-direction:column;gap:18px">
-      <h2 class="font-display font-semibold text-[15px] text-cream">${isNew ? "＋ Nuevo documento" : "Editar documento"}</h2>
+    <form method="POST" action="/admin/kb/save" class="card bg-panel border border-line p-6 flex flex-col gap-4">
+      <h2 class="font-display font-semibold text-[16px] text-cream">${isNew ? (isEs ? "＋ Nuevo documento" : "＋ New Document") : (isEs ? "Editar documento" : "Edit Document")}</h2>
       ${isNew ? "" : `<input type="hidden" name="id" value="${esc(doc.id)}">`}
 
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <label for="title" class="font-display font-semibold text-[12.5px] text-cream">Título</label>
-        <p class="text-dim text-[11px]">Un nombre claro del tema (el bot lo ve como contexto).</p>
+      <div class="flex flex-col gap-1.5">
+        <label for="title" class="font-display font-semibold text-[13px] text-cream">${titleLabel}</label>
+        <p class="text-dim text-[11.5px]">${titleHelp}</p>
         <input type="text" id="title" name="title" required maxlength="200"
-               value="${esc(doc?.title ?? "")}" placeholder="Ej. Horarios y ubicación"
-               style="background:var(--bg);border:1px solid var(--line);color:var(--cream);padding:10px 12px;font-size:12.5px;outline:none">
+               value="${esc(doc?.title ?? "")}" placeholder="${titlePlaceholder}"
+               class="rounded-xl"
+               style="background:var(--bg);border:1px solid var(--line);color:var(--cream);padding:10px 14px;font-size:13px;outline:none">
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <label for="content" class="font-display font-semibold text-[12.5px] text-cream">Contenido</label>
-        <p class="text-dim text-[11px]">Escribe en lenguaje natural, como se lo explicarías a un empleado nuevo. Máximo ${MAX_DOC_CHARS.toLocaleString("es-MX")} caracteres.</p>
+      <div class="flex flex-col gap-1.5">
+        <label for="content" class="font-display font-semibold text-[13px] text-cream">${contentLabel}</label>
+        <p class="text-dim text-[11.5px]">${contentHelp}</p>
         <textarea id="content" name="content" rows="14" required maxlength="${MAX_DOC_CHARS}"
-                  placeholder="Ej. Abrimos de lunes a sábado de 9am a 7pm. Los domingos cerramos. Estamos en Av. Reforma 123, a dos cuadras del metro…"
-                  style="background:var(--bg);border:1px solid var(--line);color:var(--cream);padding:10px 12px;font-size:12.5px;outline:none;resize:vertical">${esc(doc?.content ?? "")}</textarea>
+                  placeholder="${contentPlaceholder}"
+                  class="rounded-xl"
+                  style="background:var(--bg);border:1px solid var(--line);color:var(--cream);padding:12px 14px;font-size:13px;outline:none;resize:vertical;line-height:1.5">${esc(doc?.content ?? "")}</textarea>
       </div>
 
-      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
-        <button type="submit" class="bigbtn font-display font-bold text-[12.5px] cursor-pointer"
-                style="background:var(--accent);border:1px solid var(--accent);color:#1a1206;box-shadow:4px 4px 0 var(--linelit);padding:11px 20px">Guardar e indexar</button>
+      <div class="flex flex-wrap items-center gap-3 pt-2">
+        <button type="submit" class="apple-btn-primary font-display font-semibold text-[13px] cursor-pointer">
+          ${saveLabel}
+        </button>
         ${isNew ? "" : `
-        <details style="margin-left:auto">
-          <summary class="text-bad text-[12px]" style="cursor:pointer;list-style:none">Eliminar documento…</summary>
-          <span style="display:inline-flex;align-items:center;gap:10px;margin-top:8px">
-            <span class="text-dim text-[11px]">¿Seguro? El bot dejará de saber esto.</span>
+        <details class="ml-auto">
+          <summary class="text-bad text-[12px] cursor-pointer" style="list-style:none">${deleteSummary}</summary>
+          <span class="inline-flex items-center gap-3 mt-2">
+            <span class="text-dim text-[11.5px]">${deleteConfirmText}</span>
             <button type="submit" formaction="/admin/kb/${encodeURIComponent(doc.id)}/delete" formnovalidate
-                    style="background:transparent;border:1px solid var(--bad);color:var(--bad);padding:6px 12px;font-size:11px;cursor:pointer">Sí, eliminar</button>
+                    class="cursor-pointer text-[11px] px-3 py-1.5 rounded-lg border border-[rgba(255,69,58,.4)] text-bad bg-[rgba(255,69,58,.1)]">
+              ${deleteButton}
+            </button>
           </span>
         </details>`}
       </div>
     </form>`;
 
-  return layout({ title: isNew ? "Nuevo documento" : "Editar documento", activeTab: "kb", body, env });
+  return layout({ title: isNew ? (isEs ? "Nuevo documento" : "New Document") : (isEs ? "Editar documento" : "Edit Document"), activeTab: "kb", body, env });
 }

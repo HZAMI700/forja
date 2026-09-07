@@ -284,8 +284,71 @@ export async function renderOverview(env: Env): Promise<string> {
       <a href="/admin/mejoras" class="flex items-center gap-1 text-[12px] font-medium text-accent2 mt-3">${t.viewAll} <i data-lucide="chevron-right" width="14" height="14"></i></a>
     </div>`;
 
+  const quickStartGuide = `
+    <div id="quick-start-guide" class="card bg-panel border border-line p-5 rounded-2xl relative overflow-hidden"
+         style="animation-delay:.01s;background:linear-gradient(145deg, rgba(10,132,255,.07), var(--panel));border-color:rgba(10,132,255,.25)">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-[rgba(10,132,255,.16)] text-accent flex items-center justify-center flex-none">
+            <i data-lucide="compass" width="17" height="17"></i>
+          </div>
+          <div>
+            <h3 class="font-display font-semibold text-[15px] text-cream">${t.qsTitle}</h3>
+            <p class="text-[12px] text-muted m-0">${t.qsSubtitle}</p>
+          </div>
+        </div>
+        <button type="button"
+                onclick="localStorage.setItem(&#39;forja-dismiss-qs&#39;,&#39;1&#39;);var el=document.getElementById(&#39;quick-start-guide&#39;);if(el)el.style.display=&#39;none&#39;;"
+                class="text-[11.5px] text-dim hover:text-muted cursor-pointer flex items-center gap-1"
+                style="background:none;border:none;padding:4px 8px">
+          ${t.qsDismiss} <i data-lucide="x" width="13" height="13"></i>
+        </button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3.5">
+        <a href="/admin/flujo" class="flex flex-col gap-1.5 p-3.5 rounded-xl border border-line hover:border-accent transition-all group" style="background:var(--panel2);text-decoration:none">
+          <div class="flex items-center justify-between">
+            <span class="font-display font-semibold text-[13px] text-cream group-hover:text-accent transition-colors">${t.qsStep1Title}</span>
+            <i data-lucide="play" width="13" height="13" class="text-dim group-hover:text-accent transition-colors"></i>
+          </div>
+          <p class="text-[11.5px] text-muted leading-relaxed m-0">${t.qsStep1Desc}</p>
+          <span class="text-[11px] font-medium text-accent mt-auto pt-1 flex items-center gap-1">${t.qsStep1Cta} <i data-lucide="chevron-right" width="12" height="12"></i></span>
+        </a>
+        <a href="/admin/kb" class="flex flex-col gap-1.5 p-3.5 rounded-xl border border-line hover:border-accent transition-all group" style="background:var(--panel2);text-decoration:none">
+          <div class="flex items-center justify-between">
+            <span class="font-display font-semibold text-[13px] text-cream group-hover:text-accent transition-colors">${t.qsStep2Title}</span>
+            <i data-lucide="book-open" width="13" height="13" class="text-dim group-hover:text-accent transition-colors"></i>
+          </div>
+          <p class="text-[11.5px] text-muted leading-relaxed m-0">${t.qsStep2Desc}</p>
+          <span class="text-[11px] font-medium text-accent mt-auto pt-1 flex items-center gap-1">${t.qsStep2Cta} <i data-lucide="chevron-right" width="12" height="12"></i></span>
+        </a>
+        <a href="/admin/conexiones" class="flex flex-col gap-1.5 p-3.5 rounded-xl border border-line hover:border-accent transition-all group" style="background:var(--panel2);text-decoration:none">
+          <div class="flex items-center justify-between">
+            <span class="font-display font-semibold text-[13px] text-cream group-hover:text-accent transition-colors">${t.qsStep3Title}</span>
+            <i data-lucide="link" width="13" height="13" class="text-dim group-hover:text-accent transition-colors"></i>
+          </div>
+          <p class="text-[11.5px] text-muted leading-relaxed m-0">${t.qsStep3Desc}</p>
+          <span class="text-[11px] font-medium text-accent mt-auto pt-1 flex items-center gap-1">${t.qsStep3Cta} <i data-lucide="chevron-right" width="12" height="12"></i></span>
+        </a>
+        <a href="/admin/config" class="flex flex-col gap-1.5 p-3.5 rounded-xl border border-line hover:border-accent transition-all group" style="background:var(--panel2);text-decoration:none">
+          <div class="flex items-center justify-between">
+            <span class="font-display font-semibold text-[13px] text-cream group-hover:text-accent transition-colors">${t.qsStep4Title}</span>
+            <i data-lucide="sliders" width="13" height="13" class="text-dim group-hover:text-accent transition-colors"></i>
+          </div>
+          <p class="text-[11.5px] text-muted leading-relaxed m-0">${t.qsStep4Desc}</p>
+          <span class="text-[11px] font-medium text-accent mt-auto pt-1 flex items-center gap-1">${t.qsStep4Cta} <i data-lucide="chevron-right" width="12" height="12"></i></span>
+        </a>
+      </div>
+    </div>
+    <script>
+      if (localStorage.getItem("forja-dismiss-qs") === "1") {
+        var qs = document.getElementById("quick-start-guide");
+        if (qs) qs.style.display = "none";
+      }
+    </script>`;
+
   const body = `
     <div class="flex flex-col gap-[22px]">
+      ${quickStartGuide}
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[14px]">
         <div class="card bg-panel border border-line p-4 relative overflow-hidden" style="animation-delay:.02s">
           <div class="flex items-center justify-between text-muted">

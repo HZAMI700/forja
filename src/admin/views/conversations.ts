@@ -19,6 +19,7 @@ import { costOfUsage, type ModelId } from "../../pricing";
 import { channelLabel } from "../../channels/labels";
 import { layout } from "./layout";
 import { fmtDateTime } from "../format";
+import { getT, getLang } from "../i18n";
 
 /** Tiempo relativo corto en español (ej. "hace 5 min", "hace 2 h", "hace 3 d"). */
 function ago(ms: number | null | undefined): string {
@@ -378,8 +379,15 @@ export async function renderThreadLive(env: Env, convId: string): Promise<string
 
 // --- Composer (static per selection — NOT inside the polled fragment) ---------
 
-function renderComposer(convId: string): string {
+function renderComposer(convId: string, isEs: boolean): string {
   const id = encodeURIComponent(convId);
+  const placeholder = isEs
+    ? "Responde como humano — se envía por el canal del cliente y el bot se pausa…"
+    : "Reply as human — sends via customer channel and pauses bot…";
+  const suggestTitle = isEs ? "El co-pilot sugiere una respuesta" : "Co-pilot suggests a reply";
+  const suggestBtn = isEs ? "Sugerir" : "Suggest";
+  const sendBtn = isEs ? "Enviar" : "Send";
+
   return `
   <div style="border-top:1px solid var(--line);background:var(--panel);padding:12px;display:flex;flex-direction:column;gap:8px">
     <div id="suggestion-box"></div>
@@ -387,14 +395,15 @@ function renderComposer(convId: string): string {
           hx-on::after-request="if(event.detail.xhr.getResponseHeader('X-Sent')==='1')this.reset()"
           style="display:flex;align-items:flex-end;gap:9px">
       <textarea name="text" id="reply-text" rows="2" required
-                placeholder="Responde como humano — se envía por el canal del cliente y el bot se pausa…"
+                placeholder="${placeholder}"
+                class="rounded-xl"
                 style="flex:1;background:var(--bg);border:1px solid var(--line);color:var(--cream);padding:10px 12px;font-size:12.5px;resize:none;outline:none"></textarea>
       <button type="button" hx-post="/admin/conversations/${id}/suggest" hx-target="#suggestion-box" hx-swap="innerHTML"
-              class="chip" style="background:var(--panel2);border:1px solid var(--linelit);color:var(--accent-2);padding:11px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px" title="El co-pilot sugiere una respuesta">
-        <i data-lucide="sparkles" width="13" height="13"></i> Sugerir
+              class="apple-btn-secondary text-[12px] flex items-center gap-1.5 cursor-pointer whitespace-nowrap" style="padding:10px 14px" title="${suggestTitle}">
+        <i data-lucide="sparkles" width="14" height="14"></i> ${suggestBtn}
       </button>
-      <button type="submit" class="bigbtn" style="background:var(--accent);border:1px solid var(--accent);color:#1a1206;box-shadow:4px 4px 0 var(--linelit);padding:11px 18px;font-size:12.5px;font-weight:700;font-family:'Space Grotesk';cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px">
-        Enviar <i data-lucide="send" width="14" height="14"></i>
+      <button type="submit" class="apple-btn-primary text-[12px] flex items-center gap-1.5 cursor-pointer whitespace-nowrap" style="padding:10px 18px">
+        ${sendBtn} <i data-lucide="send" width="14" height="14"></i>
       </button>
     </form>
     <div id="send-status" style="font-size:11px;min-height:1rem;color:var(--muted)"></div>
@@ -402,22 +411,28 @@ function renderComposer(convId: string): string {
 }
 
 /** Fragment returned by /suggest — suggestion + a "use it" button that fills the textarea. */
-export function renderSuggestionBox(text: string): string {
+export function renderSuggestionBox(text: string, env?: Env): string {
+  const isEs = getLang(env) === "es";
+  const title = isEs ? "✦ Sugerencia del co-pilot" : "✦ Co-pilot Suggestion";
+  const useBtn = isEs ? "Usar" : "Use";
+
   return `
-  <div style="border:1px solid var(--accent-2);background:rgba(245,166,35,.08);padding:10px 12px;font-size:12.5px;display:flex;align-items:flex-start;gap:10px">
+  <div style="border:1px solid var(--accent-2);background:rgba(245,166,35,.08);padding:10px 12px;border-radius:12px;font-size:12.5px;display:flex;align-items:flex-start;gap:10px">
     <div style="flex:1">
-      <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2);margin-bottom:3px">✦ Sugerencia del co-pilot</div>
+      <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2);margin-bottom:3px">${title}</div>
       <div class="sugg-text" style="white-space:pre-wrap;color:var(--cream)">${escapeHtml(text)}</div>
     </div>
     <button type="button"
             onclick="document.getElementById('reply-text').value=this.parentElement.querySelector('.sugg-text').textContent;document.getElementById('suggestion-box').innerHTML=''"
-            class="chip" style="font-size:11px;background:var(--accent-2);color:#1a1206;font-weight:700;border:1px solid var(--accent-2);padding:5px 10px;white-space:nowrap;cursor:pointer">Usar</button>
+            class="chip" style="font-size:11px;background:var(--accent-2);color:#1a1206;font-weight:700;border:1px solid var(--accent-2);border-radius:8px;padding:5px 10px;white-space:nowrap;cursor:pointer">${useBtn}</button>
   </div>`;
 }
 
 // --- Full page -----------------------------------------------------------------
 
 export async function renderInbox(env: Env, p: InboxParams): Promise<string> {
+  const isEs = getLang(env) === "es";
+  const t = getT(env);
   const db = new Db(env.DB);
   const now = Date.now();
 
@@ -440,8 +455,8 @@ export async function renderInbox(env: Env, p: InboxParams): Promise<string> {
     ))?.n ?? 0;
 
   const filterPill = (href: string, label: string, active: boolean, color: string) =>
-    `<a href="${href}" class="chip" style="font-size:11px;letter-spacing:.05em;padding:5px 12px;white-space:nowrap;border:1px solid ${color};${
-      active ? `background:${color};color:#1a1206;font-weight:700` : `color:${color}`
+    `<a href="${href}" class="chip" style="font-size:11px;letter-spacing:.03em;padding:5px 12px;white-space:nowrap;border-radius:9999px;border:1px solid ${color};${
+      active ? `background:${color};color:#ffffff;font-weight:700` : `color:${color}`
     }">${label}</a>`;
 
   const list = await renderInboxList(env, p);
@@ -461,31 +476,37 @@ export async function renderInbox(env: Env, p: InboxParams): Promise<string> {
            hx-trigger="every 5s[window.puedeRefrescar('msgscroll')]" hx-swap="innerHTML">
         ${thread}
       </div>
-      ${renderComposer(p.selectedId)}`;
+      ${renderComposer(p.selectedId, isEs)}`;
   } else {
     rightPane = `
-      <div class="flex-1 flex items-center justify-center" style="font-size:12.5px;color:var(--dim);background:var(--bg)">
-        Selecciona una conversación para abrirla aquí.
+      <div class="flex-1 flex items-center justify-center text-center p-6" style="font-size:13px;color:var(--dim);background:var(--bg)">
+        ${isEs ? "Selecciona una conversación para abrirla aquí." : "Select a conversation to open here."}
       </div>`;
   }
 
+  const allLabel = isEs ? `Todas · ${totalConvs}` : `All · ${totalConvs}`;
+  const leadsLabel = `💰 Leads · ${totalLeads}`;
+  const attentionLabel = isEs ? `🔔 Atención · ${needAttention}` : `🔔 Attention · ${needAttention}`;
+  const upsetLabel = isEs ? `😠 Molestos · ${nMolestos}` : `😠 Frustrated · ${nMolestos}`;
+  const happyLabel = isEs ? `🙂 Contentos · ${nContentos}` : `🙂 Happy · ${nContentos}`;
+
   const body = `
     <div class="flex flex-wrap items-center gap-2" style="margin-bottom:14px">
-      ${filterPill(inboxUrl({ selectedId: p.selectedId }), `Todas · ${totalConvs}`, !p.filter, "var(--accent)")}
-      ${filterPill(inboxUrl({ filter: "leads", selectedId: p.selectedId }), `💰 Leads · ${totalLeads}`, p.filter === "leads", "var(--accent)")}
-      ${filterPill(inboxUrl({ filter: "atencion", selectedId: p.selectedId }), `🔔 Atención · ${needAttention}`, p.filter === "atencion", "var(--bad)")}
-      ${filterPill(inboxUrl({ filter: "molestos", selectedId: p.selectedId }), `😠 Molestos · ${nMolestos}`, p.filter === "molestos", "var(--bad)")}
-      ${filterPill(inboxUrl({ filter: "contentos", selectedId: p.selectedId }), `🙂 Contentos · ${nContentos}`, p.filter === "contentos", "var(--ok)")}
-      <form method="GET" action="/admin/conversations" class="ml-auto" style="display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);padding:7px 12px;min-width:220px">
+      ${filterPill(inboxUrl({ selectedId: p.selectedId }), allLabel, !p.filter, "var(--accent)")}
+      ${filterPill(inboxUrl({ filter: "leads", selectedId: p.selectedId }), leadsLabel, p.filter === "leads", "var(--accent)")}
+      ${filterPill(inboxUrl({ filter: "atencion", selectedId: p.selectedId }), attentionLabel, p.filter === "atencion", "var(--bad)")}
+      ${filterPill(inboxUrl({ filter: "molestos", selectedId: p.selectedId }), upsetLabel, p.filter === "molestos", "var(--bad)")}
+      ${filterPill(inboxUrl({ filter: "contentos", selectedId: p.selectedId }), happyLabel, p.filter === "contentos", "var(--ok)")}
+      <form method="GET" action="/admin/conversations" class="ml-auto flex items-center gap-2 rounded-xl border border-line" style="background:var(--panel);padding:7px 12px;min-width:220px">
         <i data-lucide="search" width="14" height="14" style="color:var(--dim)"></i>
         ${p.filter ? `<input type="hidden" name="f" value="${escapeHtml(p.filter)}">` : ""}
         ${p.selectedId ? `<input type="hidden" name="c" value="${escapeHtml(p.selectedId)}">` : ""}
-        <input name="q" value="${escapeHtml(p.search ?? "")}" placeholder="Buscar cliente…"
+        <input name="q" value="${escapeHtml(p.search ?? "")}" placeholder="${isEs ? "Buscar cliente…" : "Search customer…"}"
                style="flex:1;background:transparent;border:none;color:var(--cream);font-size:12px;outline:none">
       </form>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-[320px_1fr] overflow-hidden" style="border:1px solid var(--line);background:var(--panel);height:calc(100vh - 200px);min-height:480px">
+    <div class="grid grid-cols-1 md:grid-cols-[320px_1fr] overflow-hidden rounded-2xl border border-line" style="background:var(--panel);height:calc(100vh - 200px);min-height:480px">
       <div class="border-r border-line flex flex-col" style="min-height:0">
         <div id="conv-list" class="overflow-y-auto flex-1"
              hx-get="${listPollUrl}" hx-trigger="every 10s[window.puedeRefrescar('conv-list')]" hx-swap="innerHTML">
@@ -497,5 +518,5 @@ export async function renderInbox(env: Env, p: InboxParams): Promise<string> {
       </div>
     </div>`;
 
-  return layout({ title: "Conversaciones", activeTab: "conversations", body, env });
+  return layout({ title: t.navConversations, activeTab: "conversations", body, env });
 }

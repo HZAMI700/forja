@@ -64,7 +64,7 @@ export function getNav(env?: Env): Section[] {
   ];
 }
 
-// <head> assets: Apple fonts, Tailwind CDN + iOS tokens, Motion library, lucide, htmx.
+// <head> assets: Apple fonts, Tailwind CDN + iOS tokens, Motion library, lucide, htmx, theme script.
 const HEAD_ASSETS = `
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -73,25 +73,33 @@ const HEAD_ASSETS = `
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js"></script>
   <script>
+    (function(){
+      var s = localStorage.getItem("forja-theme");
+      if (s === "light" || (!s && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches)) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
+  <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            bg: "#000000",
-            panel: "rgba(28, 28, 30, 0.72)",
-            panel2: "rgba(44, 44, 46, 0.72)",
-            raise: "rgba(58, 58, 60, 0.75)",
-            line: "rgba(255, 255, 255, 0.08)",
-            linelit: "rgba(255, 255, 255, 0.16)",
-            accent: { DEFAULT: "#0A84FF", soft: "rgba(10, 132, 255, 0.15)" },
-            accent2: "#5E5CE6",
-            cream: "#FFFFFF",
-            muted: "rgba(235, 235, 245, 0.65)",
-            dim: "rgba(235, 235, 245, 0.38)",
-            ok: "#30D158",
-            info: "#0A84FF",
-            bad: "#FF453A",
-            violet: "#BF5AF2",
+            bg: "var(--bg)",
+            panel: "var(--panel)",
+            panel2: "var(--panel2)",
+            raise: "var(--raise)",
+            line: "var(--line)",
+            linelit: "var(--linelit)",
+            accent: { DEFAULT: "var(--accent)", soft: "var(--accent-soft)" },
+            accent2: "var(--accent-2)",
+            cream: "var(--cream)",
+            muted: "var(--muted)",
+            dim: "var(--dim)",
+            ok: "var(--ok)",
+            info: "var(--info)",
+            bad: "var(--bad)",
+            violet: "var(--violet)",
           },
           fontFamily: {
             display: ["-apple-system", "BlinkMacSystemFont", "'SF Pro Display'", "'Plus Jakarta Sans'", "sans-serif"],
@@ -104,8 +112,8 @@ const HEAD_ASSETS = `
   </script>
   <script src="https://unpkg.com/lucide@latest"></script>`;
 
-// Global stylesheet: Apple iOS design tokens, glassmorphism, squircle radii,
-// spring physics button classes, modal/toast classes, and responsive iOS TabBar.
+// Global stylesheet: Apple iOS design tokens (Dark & Light mode), glassmorphism,
+// squircle radii, spring physics button classes, modal/toast classes, and responsive iOS TabBar.
 const GLOBAL_STYLE = `
 <style>
   :root{
@@ -132,6 +140,34 @@ const GLOBAL_STYLE = `
     --green:#30D158;
     --blue:#0A84FF;
     --red:#FF453A;
+    --theme-btn-bg:rgba(255, 255, 255, 0.08);
+    --theme-btn-border:rgba(255, 255, 255, 0.14);
+  }
+  :root[data-theme="light"]{
+    --bg:#f2f2f7;
+    --panel:rgba(255, 255, 255, 0.85);
+    --panel-solid:#ffffff;
+    --panel2:rgba(242, 242, 247, 0.85);
+    --raise:#e5e5ea;
+    --line:rgba(60, 60, 67, 0.12);
+    --linelit:rgba(60, 60, 67, 0.22);
+    --accent:#007AFF;
+    --accent-2:#5856D6;
+    --accent-soft:rgba(0, 122, 255, 0.12);
+    --cream:#1c1c1e;
+    --muted:#636366;
+    --dim:#8e8e93;
+    --ok:#34C759;
+    --info:#007AFF;
+    --bad:#FF3B30;
+    --violet:#AF52DE;
+    --border:rgba(60, 60, 67, 0.12);
+    --border-lit:rgba(60, 60, 67, 0.22);
+    --green:#34C759;
+    --blue:#007AFF;
+    --red:#FF3B30;
+    --theme-btn-bg:rgba(0, 0, 0, 0.06);
+    --theme-btn-border:rgba(60, 60, 67, 0.16);
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);
@@ -143,6 +179,8 @@ const GLOBAL_STYLE = `
   ::-webkit-scrollbar-track{background:transparent}
   ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:9999px}
   ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.32)}
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18)}
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.32)}
   input,textarea,select{font-family:inherit;border-radius:10px}
   input::placeholder,textarea::placeholder{color:var(--dim)}
   input[type="range"]{accent-color:var(--accent);height:4px}
@@ -297,6 +335,28 @@ const GLOBAL_SCRIPT = `
     }
   });
 
+  // Theme toggle logic (Light / Dark mode)
+  function updateThemeIcon(){
+    var isLight = document.documentElement.getAttribute("data-theme") === "light";
+    var icon = document.getElementById("theme-icon");
+    if (icon) {
+      icon.setAttribute("data-lucide", isLight ? "moon" : "sun");
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+  window.toggleTheme = function(){
+    var isLight = document.documentElement.getAttribute("data-theme") === "light";
+    var next = isLight ? "dark" : "light";
+    if (next === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    localStorage.setItem("forja-theme", next);
+    updateThemeIcon();
+  };
+  document.addEventListener("DOMContentLoaded", updateThemeIcon);
+
   // Pausa del polling: no refresques el inbox mientras el usuario lee (o si la
   // pestaña está en segundo plano).
   window.puedeRefrescar = function(id){
@@ -431,16 +491,21 @@ export function layout(opts: { title: string; activeTab: string; body: string; e
   ${HEAD_ASSETS}
   ${GLOBAL_STYLE}
 </head>
-<body style="min-height:100vh;background:#000000;color:var(--cream)">
+<body style="min-height:100vh;background:var(--bg);color:var(--cream);transition:background .2s ease,color .2s ease">
   <div class="shell">
     ${sidebar(opts.activeTab, pro, niche, opts.env)}
     <div style="display:flex;flex-direction:column;min-width:0">
-      <header style="position:sticky;top:0;z-index:30;background:rgba(0,0,0,.75);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--line);padding:14px 26px;display:flex;align-items:center;gap:20px">
+      <header style="position:sticky;top:0;z-index:30;background:var(--panel);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--line);padding:14px 26px;display:flex;align-items:center;gap:16px">
         <div style="min-width:0">
           <div style="font-size:10.5px;font-weight:600;letter-spacing:.08em;color:var(--dim);text-transform:uppercase">${section.label} / ${item.label}</div>
           <h1 style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;font-weight:700;font-size:22px;margin:2px 0 0;letter-spacing:-.02em">${item.label}</h1>
         </div>
         <div id="proj-switcher" style="margin-left:auto"></div>
+        <button id="theme-toggle" type="button" onclick="toggleTheme()" class="bigbtn"
+          style="width:34px;height:34px;border-radius:10px;background:var(--theme-btn-bg);border:1px solid var(--theme-btn-border);color:var(--cream);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex:none"
+          title="${t.themeToggle}">
+          <i id="theme-icon" data-lucide="sun" width="16" height="16"></i>
+        </button>
         <div class="live-pill">
           <span style="width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok);animation:pulse 1.8s ease-in-out infinite,ring 2s infinite"></span>
           <span style="font-size:11.5px;font-weight:600;letter-spacing:.02em">${t.botOnline}</span>
