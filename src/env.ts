@@ -80,9 +80,10 @@ export interface Env {
   OWNER_TELEGRAM_CHAT_ID?: string;  // for handoff notifications (default channel)
   OWNER_WA_NUMBER?: string;  // for Pro handoff WhatsApp DM (requires template)
 
-  // HTTP Basic Auth password for the admin dashboard (secret).
-  // Username is always "admin". Set via `wrangler secret put DASHBOARD_PASSWORD`.
-  DASHBOARD_PASSWORD: string;
+  // HTTP Basic Auth for the admin dashboard (user: admin, pass: admin default).
+  // Can be overridden via DASHBOARD_PASSWORD secret or var.
+  DASHBOARD_PASSWORD?: string;
+  ADMIN_USERNAME?: string;
 
   // "1" = panel admin PÚBLICO (sin Basic Auth). Solo cuando el dueño lo decide
   // explícitamente (var en wrangler.toml); sin la var, el guard queda activo.

@@ -47,4 +47,65 @@ describe("checkBasicCredentials", () => {
     const header = `Basic ${btoa("admin:a:b:c")}`;
     expect(checkBasicCredentials(header, colonEnv)).toBe(true);
   });
+
+  describe("default admin / admin credentials", () => {
+    const defaultEnv = {} as unknown as Env;
+    const adminAdminHeader = `Basic ${btoa("admin:admin")}`;
+
+    it("accepts admin / admin when DASHBOARD_PASSWORD is unset", () => {
+      expect(checkBasicCredentials(adminAdminHeader, defaultEnv)).toBe(true);
+    });
+
+    it("accepts admin / admin when DASHBOARD_PASSWORD is 'admin'", () => {
+      const explicitEnv = { DASHBOARD_PASSWORD: "admin" } as unknown as Env;
+      expect(checkBasicCredentials(adminAdminHeader, explicitEnv)).toBe(true);
+    });
+
+    it("rejects wrong username with admin password", () => {
+      const wrongUserHeader = `Basic ${btoa("wronguser:admin")}`;
+      expect(checkBasicCredentials(wrongUserHeader, defaultEnv)).toBe(false);
+    });
+
+    it("rejects wrong password with admin username", () => {
+      const wrongPassHeader = `Basic ${btoa("admin:wrongpassword")}`;
+      expect(checkBasicCredentials(wrongPassHeader, defaultEnv)).toBe(false);
+    });
+  });
+});
+
+import { Hono } from "hono";
+import { adminAuth } from "../../src/admin/auth";
+
+describe("adminAuth middleware HTTP behavior", () => {
+  function makeApp(testEnv: any = {}) {
+    const app = new Hono<{ Bindings: Env }>();
+    app.use("*", (c, next) => adminAuth(testEnv)(c, next));
+    app.get("/admin/test", (c) => c.text("authorized"));
+    return app;
+  }
+
+  it("admin / admin → successful (200)", async () => {
+    const app = makeApp();
+    const res = await app.request("/admin/test", {
+      headers: { Authorization: `Basic ${btoa("admin:admin")}` },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("authorized");
+  });
+
+  it("wrong username → rejected (401)", async () => {
+    const app = makeApp();
+    const res = await app.request("/admin/test", {
+      headers: { Authorization: `Basic ${btoa("wronguser:admin")}` },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("wrong password → rejected (401)", async () => {
+    const app = makeApp();
+    const res = await app.request("/admin/test", {
+      headers: { Authorization: `Basic ${btoa("admin:wrongpassword")}` },
+    });
+    expect(res.status).toBe(401);
+  });
 });

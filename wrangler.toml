@@ -38,6 +38,7 @@ BOT_LANGUAGE = "{{BOT_LANGUAGE}}"
 BOT_TIER = "{{BOT_TIER}}"  # 'free' | 'pro'
 BUFFER_SECONDS = "15"
 DASHBOARD_BASE_URL = "https://horizontes-bot.workers.dev"
+DASHBOARD_PASSWORD = "admin"
 
 # Secrets (set with `wrangler secret put <NAME>` — never commit values):
 #   ANTHROPIC_API_KEY          required — Claude API

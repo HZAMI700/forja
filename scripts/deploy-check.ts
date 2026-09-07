@@ -67,7 +67,7 @@ if (isMain) {
   try {
     const { readFileSync } = await import("node:fs");
     const toml = readFileSync("wrangler.toml", "utf8");
-    for (const k of ["BOT_NAME", "BOT_TIER"] as const) {
+    for (const k of ["BOT_NAME", "BOT_TIER", "DASHBOARD_PASSWORD"] as const) {
       if (!cfg[k]) cfg[k] = toml.match(new RegExp(`^${k}\\s*=\\s*"([^"]*)"`, "m"))?.[1];
     }
   } catch { /* sin wrangler.toml: lo reportará el error de BOT_TIER */ }

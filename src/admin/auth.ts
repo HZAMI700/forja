@@ -13,6 +13,17 @@ import type { Env } from "../env";
 /** Fixed username for the admin dashboard. */
 export const ADMIN_USERNAME = "admin";
 
+/** Default fallback password if DASHBOARD_PASSWORD secret is unset. */
+export const DEFAULT_ADMIN_PASSWORD = "admin";
+
+/**
+ * Resolves the expected password for admin authentication.
+ * Falls back to DEFAULT_ADMIN_PASSWORD ("admin") if DASHBOARD_PASSWORD is unset or empty.
+ */
+export function getExpectedPassword(env?: Partial<Env>): string {
+  return env?.DASHBOARD_PASSWORD || DEFAULT_ADMIN_PASSWORD;
+}
+
 /**
  * Hono middleware factory enforcing HTTP Basic Auth on admin routes.
  * Mount it on the `/admin/*` group, e.g. `app.use("/admin/*", adminAuth(env))`.
@@ -20,7 +31,7 @@ export const ADMIN_USERNAME = "admin";
 export function adminAuth(env: Env): MiddlewareHandler {
   return basicAuth({
     username: ADMIN_USERNAME,
-    password: env.DASHBOARD_PASSWORD,
+    password: getExpectedPassword(env),
   });
 }
 
@@ -84,6 +95,6 @@ export function checkBasicCredentials(
   const password = decoded.slice(sep + 1);
 
   const userOk = timingSafeEqual(username, ADMIN_USERNAME);
-  const passOk = timingSafeEqual(password, env.DASHBOARD_PASSWORD ?? "");
+  const passOk = timingSafeEqual(password, getExpectedPassword(env));
   return userOk && passOk;
 }
